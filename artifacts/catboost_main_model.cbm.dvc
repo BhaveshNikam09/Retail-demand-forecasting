@@ -1,0 +1,5 @@
+outs:
+- md5: f0ebd18dda0b21909002ff19e0b70aac
+  size: 1171304
+  hash: md5
+  path: catboost_main_model.cbm
