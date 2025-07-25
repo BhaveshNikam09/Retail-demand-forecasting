@@ -8,6 +8,3 @@ stages:
       - artifacts/catboost_model_10.cbm
       - artifacts/catboost_model_90.cbm
       - artifacts/preprocessor.pkl
-      - artifacts/quantile_predictions.csv
-      - artifacts/latest_input.csv
-      - artifacts/uploaded_data.csv
