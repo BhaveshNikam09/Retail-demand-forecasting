@@ -1,0 +1,5 @@
+outs:
+- md5: 31da844b1d6a69d9c63d497d1dfb15a9
+  size: 11299757
+  hash: md5
+  path: Retail_Dataset2.csv
