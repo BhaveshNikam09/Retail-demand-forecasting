@@ -1,99 +1,78 @@
-import streamlit as st
-import pandas as pd
+import os
 import numpy as np
-from catboost import CatBoostRegressor
+import pandas as pd
+import streamlit as st
 import matplotlib.pyplot as plt
-import seaborn as sns
+from catboost import CatBoostRegressor
 from src.Forecasting_System.components.data_transformation import DataTransformation
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from src.Forecasting_System.utils.utils import load_object
 
-# Set page config
-st.set_page_config(page_title="Retail Forecasting", layout="wide")
+# Load paths
+MAIN_MODEL_PATH = os.path.join("artifacts", "catboost_main_model.cbm")
+MODEL_10_PATH = os.path.join("artifacts", "catboost_model_10.cbm")
+MODEL_90_PATH = os.path.join("artifacts", "catboost_model_90.cbm")
+PREPROCESSOR_PATH = os.path.join("artifacts", "preprocessor.pkl")
+
+# Load models and preprocessor
+model = CatBoostRegressor()
+model.load_model(MAIN_MODEL_PATH)
+
+model_10 = CatBoostRegressor()
+model_10.load_model(MODEL_10_PATH)
+
+model_90 = CatBoostRegressor()
+model_90.load_model(MODEL_90_PATH)
+
+preprocessor = load_object(PREPROCESSOR_PATH)
 
 st.title("📦 Retail Demand Forecasting System")
 st.markdown("Upload your retail dataset and get forecast predictions with confidence intervals.")
 
-# Load trained models
-@st.cache_resource
-def load_models():
-    model_main = CatBoostRegressor()
-    model_main.load_model("artifacts/catboost_main_model.cbm")
-
-    model_10 = CatBoostRegressor()
-    model_10.load_model("artifacts/catboost_model_10.cbm")
-
-    model_90 = CatBoostRegressor()
-    model_90.load_model("artifacts/catboost_model_90.cbm")
-
-    return model_main, model_10, model_90
-
-model, model_10, model_90 = load_models()
-
-# Upload CSV
-uploaded_file = st.file_uploader("📁 Upload CSV", type="csv")
+uploaded_file = st.file_uploader("📁 Upload CSV", type=["csv"])
 
 if uploaded_file:
-    df = pd.read_csv(uploaded_file)
-    uploaded_file_path = "artifacts/uploaded_data.csv"
-    df.to_csv(uploaded_file_path, index=False)
+    try:
+        df = pd.read_csv(uploaded_file)
 
-    st.success("✅ File uploaded and saved!")
+        # Take last 20 rows to preserve rolling features
+        latest_df = df.tail(20).copy()
 
-    # Transform input data
-    transformer = DataTransformation()
-    X_train, X_test, y_train, y_test = transformer.initiate_data_transformation(uploaded_file_path)
+        transformer = DataTransformation()
 
-    # Combine transformed data
-    X_combined = np.vstack([X_train, X_test])
-    y_combined = np.hstack([y_train, y_test])
+        # Apply transformation
+        transformed_X, _ = transformer.transform_new_data(latest_df, preprocessor)
 
-    # Run predictions
-    y_pred_log = model.predict(X_combined)
-    y_pred_10_log = model_10.predict(X_combined)
-    y_pred_90_log = model_90.predict(X_combined)
+        if transformed_X.shape[0] == 0:
+            st.error("❌ Not enough valid rows after transformation. Please upload more data.")
+            st.stop()
 
-    y_pred = np.expm1(y_pred_log)
-    y_pred_10 = np.expm1(y_pred_10_log)
-    y_pred_90 = np.expm1(y_pred_90_log)
-    actual_demand = np.expm1(y_combined)
+        # Take last valid row for prediction
+        X_input = transformed_X[-1:]  # Shape = (1, 32)
 
-    # Merge predictions into original df
-    df = df.iloc[-len(y_pred):].copy()
-    df["Prediction"] = y_pred
-    df["Lower_Bound_10%"] = y_pred_10
-    df["Upper_Bound_90%"] = y_pred_90
-    df["Actual"] = actual_demand
+        # Predict
+        y_pred = np.expm1(model.predict(X_input))[0]
+        y_pred_10 = np.expm1(model_10.predict(X_input))[0]
+        y_pred_90 = np.expm1(model_90.predict(X_input))[0]
 
-    # Evaluation
-    mae = mean_absolute_error(df["Actual"], df["Prediction"])
-    rmse = mean_squared_error(df["Actual"], df["Prediction"], squared=False)
-    r2 = r2_score(df["Actual"], df["Prediction"])
-    interval_coverage = ((df["Actual"] >= df["Lower_Bound_10%"]) & (df["Actual"] <= df["Upper_Bound_90%"])).mean() * 100
+        st.markdown("### 🔮 Forecast for Next Period")
+        st.success(f"📈 Predicted Demand: **{y_pred:.2f}**")
+        st.info(f"📦 Confidence Interval (10%-90%): **{y_pred_10:.2f} - {y_pred_90:.2f}**")
 
-    st.subheader("📊 Forecast Summary")
-    st.metric("📉 MAE", f"{mae:.2f}")
-    st.metric("📉 RMSE", f"{rmse:.2f}")
-    st.metric("📈 R² Score", f"{r2:.4f}")
-    st.metric("📦 Interval coverage within 10%-90%", f"{interval_coverage:.2f}%")
+        # Plot 30-day forecast
+        future_dates = pd.date_range(start=pd.to_datetime("today"), periods=30)
+        forecast = [y_pred] * 30
+        lower = [y_pred_10] * 30
+        upper = [y_pred_90] * 30
 
-    # Plot
-    st.subheader("📈 Forecast Chart")
-    fig, ax = plt.subplots(figsize=(12, 5))
-    ax.plot(df["Date"], df["Prediction"], label="Prediction", color='blue')
-    ax.plot(df["Date"], df["Actual"], label="Actual", color='green', linestyle='--')
-    ax.fill_between(df["Date"], df["Lower_Bound_10%"], df["Upper_Bound_90%"],
-                    color='lightblue', alpha=0.4, label='Confidence Interval')
-    ax.set_xlabel("Date")
-    ax.set_ylabel("Demand")
-    ax.legend()
-    st.pyplot(fig)
+        plt.figure(figsize=(10, 5))
+        plt.plot(future_dates, forecast, label="Forecast", color="blue")
+        plt.fill_between(future_dates, lower, upper, color='blue', alpha=0.2, label="Confidence Interval")
+        plt.xlabel("Date")
+        plt.ylabel("Demand")
+        plt.title("📊 30-Day Demand Forecast")
+        plt.grid(True)
+        plt.legend()
+        st.pyplot(plt)
 
-    # Display DataFrame
-    st.subheader("🔍 Forecast Table")
-    st.dataframe(df.tail(50))
-
-    # Download
-    st.download_button("⬇️ Download Results as CSV",
-                       df.to_csv(index=False).encode("utf-8"),
-                       "retail_forecast_results.csv",
-                       "text/csv")
+    except Exception as e:
+        st.error(f"❌ Prediction Failed: {str(e)}")

@@ -110,7 +110,22 @@ class DataTransformation:
 
             logging.info("Data transformation completed with TimeSeriesSplit.")
             return X_train, X_test, y_train, y_test
-
         except Exception as e:
             logging.error("Error during data transformation pipeline.")
             raise custom_exception(e, sys)
+
+
+    def transform_new_data(self, df, preprocessor):
+        try:
+            # Feature Engineering
+            df = self.feature_engineering(df)
+            X = df.drop(columns=['Order_Demand'], errors='ignore')
+
+            # Transform using loaded preprocessor
+            X_transformed = preprocessor.transform(X)
+            return X_transformed, X
+
+        except Exception as e:
+            raise custom_exception(e, sys)
+
+        
