@@ -1,0 +1,17 @@
+stages:
+  prepare:
+    cmd: \
+  train:
+    cmd: python src/Forecasting_System/pipelines/model_trainer_pipeline.py
+    deps:
+    - artifacts/raw.csv
+    - src/Forecasting_System/pipelines/model_trainer_pipeline.py
+    outs:
+    - artifacts/catboost_main_model.cbm
+  evaluate:
+    cmd: python src/Forecasting_System/pipelines/training_pipeline.py
+    deps:
+    - artifacts/catboost_main_model.cbm
+    - src/Forecasting_System/pipelines/training_pipeline.py
+    outs:
+    - mlruns_artifacts
