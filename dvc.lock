@@ -1,0 +1,14 @@
+schema: '2.0'
+stages:
+  prepare:
+    cmd: python src/Forecasting_System/components/data_ingestion.py
+    deps:
+    - path: src/Forecasting_System/components/data_ingestion.py
+      hash: md5
+      md5: bde3080dabc4dab20470239f5612d2cc
+      size: 1395
+    outs:
+    - path: artifacts/raw.csv
+      hash: md5
+      md5: 31da844b1d6a69d9c63d497d1dfb15a9
+      size: 11299757
