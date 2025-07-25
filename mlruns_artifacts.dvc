@@ -1,0 +1,6 @@
+outs:
+- md5: 1deeeea7912a7ffde099213a145254e6.dir
+  size: 1171280
+  nfiles: 1
+  hash: md5
+  path: mlruns_artifacts
