@@ -1,71 +1,58 @@
 import os
 import sys
-import pandas as pd
+from urllib.parse import urlparse
+import numpy as np
 import mlflow
-import pickle
-from Forecasting_System.logger import logging
-from Forecasting_System.exception import CustomException
-from Forecasting_System.utils.common import save_object
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from dotenv import load_dotenv
+from src.Forecasting_System.utils.utils import load_object
 
-def evaluate_model(true, predicted):
-    mse = mean_squared_error(true, predicted)
-    mae = mean_absolute_error(true, predicted)
-    rmse = mean_squared_error(true, predicted, squared=False)
-    r2 = r2_score(true, predicted)
+import pickle
 
-    return {"mse": mse, "mae": mae, "rmse": rmse, "r2_score": r2}
+# Load credentials
+load_dotenv()
 
-
-def initiate_model_evaluation(X_train, X_test, y_train, y_test):
-    try:
-        from Forecasting_System.components.data_transformation import DataTransformation
-        from Forecasting_System.components.model_trainer import ModelTrainer
-
-        # Load preprocessor
-        preprocessor_path = os.path.join("artifacts", "preprocessor.pkl")
-        with open(preprocessor_path, "rb") as f:
-            preprocessor = pickle.load(f)
-
-        model_trainer = ModelTrainer()
-        model = model_trainer.get_trained_model()
-
-        X_test_transformed = preprocessor.transform(X_test)
-        X_train_transformed = preprocessor.transform(X_train)
-
-        y_pred = model.predict(X_test_transformed)
-        y_train_pred = model.predict(X_train_transformed)
-
-        test_metrics = evaluate_model(y_test, y_pred)
-        train_metrics = evaluate_model(y_train, y_train_pred)
-
-        logging.info(f"Train Metrics: {train_metrics}")
-        logging.info(f"Test Metrics: {test_metrics}")
-
-        # Set tracking URI
+class ModelEvaluation:
+    def __init__(self):
+        # Set DagsHub MLflow Tracking URI
         mlflow.set_tracking_uri("https://dagshub.com/BhaveshNikam09/Retail-demand-forecasting.mlflow")
-        mlflow.set_experiment("Retail Forecasting Experiment")
 
-        with mlflow.start_run():
-            mlflow.log_params(model.get_params())
-            mlflow.log_metrics(test_metrics)
+        username = os.getenv("MLFLOW_TRACKING_USERNAME")
+        password = os.getenv("MLFLOW_TRACKING_PASSWORD")
 
-            # Save model and preprocessor locally
-            os.makedirs("mlruns_artifacts", exist_ok=True)
-            model_path = "mlruns_artifacts/model.pkl"
-            pre_path = "mlruns_artifacts/preprocessor.pkl"
+        if not username or not password:
+            raise Exception("❌ Missing DagsHub credentials in .env")
 
-            with open(model_path, "wb") as f:
-                pickle.dump(model, f)
-            with open(pre_path, "wb") as f:
-                pickle.dump(preprocessor, f)
+        mlflow.set_experiment("Retail-Demand-Forecasting")
 
-            # Log manually as artifacts
-            mlflow.log_artifact(model_path, artifact_path="model")
-            mlflow.log_artifact(pre_path, artifact_path="preprocessor")
+    def eval_metrics(self, actual, pred):
+        rmse = np.sqrt(mean_squared_error(actual, pred))
+        mae = mean_absolute_error(actual, pred)
+        r2 = r2_score(actual, pred)
+        return rmse, mae, r2
 
-            logging.info("Logged model and preprocessor to MLflow.")
+    def initiate_model_evaluation(self, X_train, X_test, y_train, y_test):
+        try:
+            model_path = os.path.join("artifacts", "catboost_main_model.cbm")
+            model = load_object(model_path)
 
-    except Exception as e:
-        logging.error("Error during model evaluation.")
-        raise CustomException(e, sys)
+            with mlflow.start_run():
+                predicted_qualities = model.predict(X_test)
+                rmse, mae, r2 = self.eval_metrics(y_test, predicted_qualities)
+
+                mlflow.log_metric("rmse", rmse)
+                mlflow.log_metric("mae", mae)
+                mlflow.log_metric("r2", r2)
+
+                # ✅ Save model manually and log it as an artifact
+                os.makedirs("mlruns_artifacts", exist_ok=True)
+                local_model_path = os.path.join("mlruns_artifacts", "catboost_model.cbm")
+                model.save_model(local_model_path)
+
+                mlflow.log_artifact(local_model_path, artifact_path="model")
+
+                print("✅ Model saved and logged manually to DagsHub.")
+
+        except Exception as e:
+            print(f"❌ Exception during model evaluation: {e}")
+            raise e

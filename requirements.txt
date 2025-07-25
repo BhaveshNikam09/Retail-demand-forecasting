@@ -13,4 +13,6 @@ joblib==1.4.2
 tqdm==4.66.4
 catboost==1.2.0
 streamlit
+dvc
+mlfow==2.9.1
 -e .
