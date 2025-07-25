@@ -14,5 +14,6 @@ tqdm==4.66.4
 catboost==1.2.0
 streamlit
 dvc
+dvc[s3]
 mlfow==2.9.1
 -e .
