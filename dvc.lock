@@ -1,14 +1,26 @@
 schema: '2.0'
 stages:
-  prepare:
-    cmd: python src/Forecasting_System/components/data_ingestion.py
+  train:
+    cmd: python src/Forecasting_System/pipelines/training_pipeline.py
     deps:
-    - path: src/Forecasting_System/components/data_ingestion.py
+    - path: src/Forecasting_System/pipelines/training_pipeline.py
       hash: md5
-      md5: bde3080dabc4dab20470239f5612d2cc
-      size: 1395
+      md5: ebeaeb19cd88d6b9c26fe7eeb4948c93
+      size: 865
     outs:
-    - path: artifacts/raw.csv
+    - path: artifacts/catboost_main_model.cbm
       hash: md5
-      md5: 31da844b1d6a69d9c63d497d1dfb15a9
-      size: 11299757
+      md5: 436478f20d18d74b3882953aed72d7b4
+      size: 1171304
+    - path: artifacts/catboost_model_10.cbm
+      hash: md5
+      md5: 764d69ff78b33f2264bbceb7980ba5d6
+      size: 1184904
+    - path: artifacts/catboost_model_90.cbm
+      hash: md5
+      md5: feed8cf9a545b37e088c79d8bd6836b1
+      size: 1187552
+    - path: artifacts/preprocessor.pkl
+      hash: md5
+      md5: 90f8557f149aee3be3f5f7e48dbddc11
+      size: 35294
