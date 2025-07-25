@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from src.Forecasting_System.logger import logging
 from src.Forecasting_System.exception import custom_exception
-
+from catboost import CatBoostRegressor 
 from sklearn.metrics import r2_score
 
 def save_object(file_path, obj):
@@ -45,8 +45,16 @@ def evaluate_model(X_train,y_train,X_test,y_test,model):
     
 def load_object(file_path):
     try:
-        with open(file_path,'rb') as file_obj:
-            return pickle.load(file_obj)
+        if file_path.endswith('.cbm'):
+            # You can dynamically switch to CatBoostRegressor if needed
+            model = CatBoostRegressor()
+            model.load_model(file_path)
+            return model
+        elif file_path.endswith('.pkl'):
+            with open(file_path, 'rb') as file_obj:
+                return pickle.load(file_obj)
+        else:
+            raise ValueError(f"Unsupported file format: {file_path}")
     except Exception as e:
-        logging.info('Exception Occured in load_object function utils')
-        raise custom_exception(e,sys)
+        logging.info(f'Exception occurred while loading object from {file_path}')
+        raise custom_exception(e, sys)
