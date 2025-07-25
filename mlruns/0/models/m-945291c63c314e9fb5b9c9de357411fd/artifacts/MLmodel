@@ -1,0 +1,32 @@
+artifact_path: file:///D:/ML/Forecast/mlruns/0/models/m-945291c63c314e9fb5b9c9de357411fd/artifacts
+flavors:
+  catboost:
+    catboost_version: 1.2.8
+    code: null
+    data: model.cb
+    model_type: CatBoostRegressor
+    save_format: cbm
+  python_function:
+    data: model.cb
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.catboost
+    python_version: 3.9.23
+is_signature_from_type_hint: false
+mlflow_version: 3.1.4
+model_id: m-945291c63c314e9fb5b9c9de357411fd
+model_size_bytes: 1208426
+model_uuid: m-945291c63c314e9fb5b9c9de357411fd
+prompts: null
+run_id: 88bc7891960e4bfc84dd4f16afab7a3d
+saved_input_example_info:
+  artifact_path: input_example.json
+  serving_input_path: serving_input_example.json
+  type: ndarray
+signature:
+  inputs: '[{"type": "tensor", "tensor-spec": {"dtype": "float64", "shape": [-1, 2149]}}]'
+  outputs: '[{"type": "tensor", "tensor-spec": {"dtype": "float64", "shape": [-1]}}]'
+  params: null
+type_hint_from_example: false
+utc_time_created: '2025-07-25 15:15:41.359792'

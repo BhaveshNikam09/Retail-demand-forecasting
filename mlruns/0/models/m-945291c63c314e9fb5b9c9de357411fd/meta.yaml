@@ -1,0 +1,10 @@
+artifact_location: file:///D:/ML/Forecast/mlruns/0/models/m-945291c63c314e9fb5b9c9de357411fd/artifacts
+creation_timestamp: 1753456541271
+experiment_id: '0'
+last_updated_timestamp: 1753456548005
+model_id: m-945291c63c314e9fb5b9c9de357411fd
+model_type: null
+name: catboost_model
+source_run_id: 88bc7891960e4bfc84dd4f16afab7a3d
+status: 2
+status_message: null

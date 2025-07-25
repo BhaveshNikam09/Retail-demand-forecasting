@@ -1,0 +1,10 @@
+artifact_location: file:///D:/ML/Forecast/mlruns/0/models/m-9930548b2c0b40d58b4b685b381fb309/artifacts
+creation_timestamp: 1753455364134
+experiment_id: '0'
+last_updated_timestamp: 1753455373618
+model_id: m-9930548b2c0b40d58b4b685b381fb309
+model_type: null
+name: model
+source_run_id: 2506b496484447d18b3ca69da1669254
+status: 2
+status_message: null

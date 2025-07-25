@@ -1,64 +1,71 @@
 import os
 import sys
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from urllib.parse import urlparse
+import pandas as pd
 import mlflow
-import mlflow.sklearn
-import numpy as np
 import pickle
-from src.Forecasting_System.utils.utils import load_object
+from Forecasting_System.logger import logging
+from Forecasting_System.exception import CustomException
+from Forecasting_System.utils.common import save_object
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+
+def evaluate_model(true, predicted):
+    mse = mean_squared_error(true, predicted)
+    mae = mean_absolute_error(true, predicted)
+    rmse = mean_squared_error(true, predicted, squared=False)
+    r2 = r2_score(true, predicted)
+
+    return {"mse": mse, "mae": mae, "rmse": rmse, "r2_score": r2}
 
 
+def initiate_model_evaluation(X_train, X_test, y_train, y_test):
+    try:
+        from Forecasting_System.components.data_transformation import DataTransformation
+        from Forecasting_System.components.model_trainer import ModelTrainer
 
-class ModelEvaluation:
-    def __init__(self):
-        pass
+        # Load preprocessor
+        preprocessor_path = os.path.join("artifacts", "preprocessor.pkl")
+        with open(preprocessor_path, "rb") as f:
+            preprocessor = pickle.load(f)
 
-    
-    def eval_metrics(self,actual, pred):
-        rmse = np.sqrt(mean_squared_error(actual, pred))# here is RMSE
-        mae = mean_absolute_error(actual, pred)# here is MAE
-        r2 = r2_score(actual, pred)# here is r3 value
-        return rmse, mae, r2
-    
-    
-    def initiate_model_evaluation(self,X_train,X_test,y_train,y_test):
-        try:
-            
+        model_trainer = ModelTrainer()
+        model = model_trainer.get_trained_model()
 
-            model_path=os.path.join("artifacts","catboost_main_model.cbm")
-            model=load_object(model_path)
-        
+        X_test_transformed = preprocessor.transform(X_test)
+        X_train_transformed = preprocessor.transform(X_train)
 
-            mlflow.set_registry_uri("https://dagshub.com/BhaveshNikam09/Retail-demand-forecasting.mlflow")
-            
-            tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme
-            
-            print(tracking_url_type_store)
+        y_pred = model.predict(X_test_transformed)
+        y_train_pred = model.predict(X_train_transformed)
 
+        test_metrics = evaluate_model(y_test, y_pred)
+        train_metrics = evaluate_model(y_train, y_train_pred)
 
+        logging.info(f"Train Metrics: {train_metrics}")
+        logging.info(f"Test Metrics: {test_metrics}")
 
-            with mlflow.start_run():
+        # Set tracking URI
+        mlflow.set_tracking_uri("https://dagshub.com/BhaveshNikam09/Retail-demand-forecasting.mlflow")
+        mlflow.set_experiment("Retail Forecasting Experiment")
 
-                predicted_qualities = model.predict(X_test)
+        with mlflow.start_run():
+            mlflow.log_params(model.get_params())
+            mlflow.log_metrics(test_metrics)
 
-                (rmse, mae, r2) = self.eval_metrics(y_test, predicted_qualities)
+            # Save model and preprocessor locally
+            os.makedirs("mlruns_artifacts", exist_ok=True)
+            model_path = "mlruns_artifacts/model.pkl"
+            pre_path = "mlruns_artifacts/preprocessor.pkl"
 
-                mlflow.log_metric("rmse", rmse)
-                mlflow.log_metric("r2", r2)
-                mlflow.log_metric("mae", mae)
+            with open(model_path, "wb") as f:
+                pickle.dump(model, f)
+            with open(pre_path, "wb") as f:
+                pickle.dump(preprocessor, f)
 
+            # Log manually as artifacts
+            mlflow.log_artifact(model_path, artifact_path="model")
+            mlflow.log_artifact(pre_path, artifact_path="preprocessor")
 
-                # Model registry does not work with file store
-                if tracking_url_type_store != "file":
+            logging.info("Logged model and preprocessor to MLflow.")
 
-                    mlflow.sklearn.log_model(model, "model", registered_model_name="ml_model")
-                else:
-                    mlflow.sklearn.log_model(model, "model")
-
-
-                
-
-            
-        except Exception as e:
-            raise e
+    except Exception as e:
+        logging.error("Error during model evaluation.")
+        raise CustomException(e, sys)
