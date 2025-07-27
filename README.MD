@@ -1,6 +1,6 @@
 # 📦 Retail Demand Forecasting System
 
-![Retail Forecasting Dashboard](https://raw.githubusercontent.com/yourusername/yourrepo/main/assets/forecasting_dashboard.png)
+![Retail Forecasting Dashboard](image-1.png)
 
 A production-ready demand forecasting system that uses **CatBoost** regression models with **quantile estimation** to predict future order demand, including **confidence intervals** (10% - 90%).
 
@@ -51,7 +51,7 @@ Features created from the input `Date` and `Order_Demand`:
 
 > Example UI:
 
-![UI Screenshot](https://raw.githubusercontent.com/yourusername/yourrepo/main/assets/ui_preview.png)
+![UI Screenshot](image.png)
 
 ---
 
