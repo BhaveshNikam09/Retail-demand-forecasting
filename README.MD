@@ -28,7 +28,7 @@ A production-ready demand forecasting system that uses **CatBoost** regression m
 |--------|--------|
 | **MAE** | `2046.80` |
 | **RMSE** | `17983.73` |
-| **R² Score** | `0.6670` |
+| **R² Score** | `0.8595` |
 | **Interval Coverage (10%-90%)** | `79.85%` |
 
 ---
